@@ -1,3 +1,4 @@
+const parseLogin = require('express').urlencoded({ extended: false, limit: '2kb', parameterLimit: 2 });
 const { createHmac, timingSafeEqual } = require('node:crypto');
 const configured = process.env.RENDER_EXTERNAL_URL || process.env.READER_ORIGIN;
 const origin = configured ? new URL(configured) : null;
@@ -34,18 +35,42 @@ function validRequest(req) {
   return /^(127\.0\.0\.1|localhost):8765$/.test(host) &&
     (!requestOrigin || /^http:\/\/(127\.0\.0\.1|localhost):8765$/.test(requestOrigin));
 }
+function loginPage(res, invalid = false) {
+  return res.status(invalid ? 401 : 200).type('html').send(`<!doctype html>
+<html lang="pt-BR"><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Entrar · TikTok Live Reader</title>
+<style>body{margin:0;min-height:100dvh;display:grid;place-items:center;background:#0f172a;color:#f8fafc;font:16px system-ui}main{box-sizing:border-box;width:min(92%,400px);padding:24px;background:#1e293b;border:1px solid #475569;border-radius:14px}h1{margin-top:0;font-size:1.5rem}form{display:grid;gap:12px}input,button{box-sizing:border-box;width:100%;font:inherit;padding:12px;border-radius:8px}input{background:#0f172a;color:white;border:1px solid #64748b}button{background:#0369a1;color:white;border:0;font-weight:700}p{line-height:1.5}</style>
+<main><h1>TikTok Live Reader</h1><p>Use a senha do painel configurada no Back4app.</p>
+${invalid ? '<p role="alert">Senha incorreta. Confira o valor de READER_PASSWORD.</p>' : ''}
+<form action="/login" method="post"><label for="password">Senha do painel</label>
+<input id="password" name="password" type="password" autocomplete="current-password" required maxlength="512">
+<button type="submit">Entrar</button></form></main></html>`);
+}
+function setSession(req, res) {
+  res.cookie(cookieName, panelToken, { httpOnly: true, sameSite: 'strict', secure: requestOriginFor(req).startsWith('https:'), path: '/' });
+}
 function middleware(req, res, next) {
   if (!validRequest(req)) return res.sendStatus(403);
   if (!enabled) return next();
   res.set({ 'Cache-Control': 'private, no-store', 'Referrer-Policy': 'no-referrer' });
+  if (req.path === '/login' && req.method === 'POST') {
+    return parseLogin(req, res, err => {
+      if (err) return res.sendStatus(err.status || 400);
+      if (!equal(req.body?.password, password)) return loginPage(res, true);
+      setSession(req, res);
+      return res.redirect(303, '/');
+    });
+  }
   if (req.path === '/' && req.query.overlay === '1') return overlay(req.query.key) ? next() : res.sendStatus(403);
   if (req.path === '/app.js' || req.path === '/transport.js') return next();
   if (panel(req)) return next();
   const basic = 'Basic ' + Buffer.from('reader:' + password).toString('base64');
   if (equal(req.headers.authorization, basic)) {
-    res.cookie(cookieName, panelToken, { httpOnly: true, sameSite: 'strict', secure: requestOriginFor(req).startsWith('https:'), path: '/' });
+    setSession(req, res);
     return next();
   }
-  res.set('WWW-Authenticate', 'Basic realm="TikTok Live Reader"').status(401).send('Usuário: reader. Use a senha definida na hospedagem.');
+  if (req.path === '/' && req.method === 'GET') return loginPage(res);
+  return res.sendStatus(401);
 }
 module.exports = { origin, enabled, requestOriginFor, validRequest, middleware, panel, overlay, overlayToken };
+
