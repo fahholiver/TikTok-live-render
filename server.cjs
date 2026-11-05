@@ -8,10 +8,10 @@ const io = new Server(server, {allowRequest:(req,cb)=>cb(null,auth.validRequest(
 app.get('/healthz', (_req,res)=>res.status(200).send('ok'));
 app.use(auth.middleware);
 app.get('/transport.js', (req,res)=>res.redirect('/socket.io/socket.io.js'));
-app.get('/api/overlay-url', (req,res)=>res.json({url: auth.origin ? auth.origin.origin+'/?overlay=1&key='+auth.overlayToken : null}));
+app.get('/api/overlay-url', (req,res)=>res.json({url: auth.enabled ? auth.requestOriginFor(req)+'/?overlay=1&key='+auth.overlayToken : null}));
 app.use(express.static(__dirname+'/dist'));
 io.use((socket,next)=>{
- if(!auth.origin) return next();
+ if(!auth.enabled) return next();
  if(auth.panel(socket.request)){socket.data.canControl=true;return next();}
  if(auth.overlay(socket.handshake.auth?.overlayKey))return next();
  next(new Error('Acesso não autorizado'));
@@ -50,5 +50,5 @@ io.on('connection',socket=>{
  });
 });
 server.on('error',e=>{console.error('Não foi possível iniciar:',e.message);process.exit(1);});
-const port=auth.origin?Number(process.env.PORT||8765):8765;
-server.listen(port,auth.origin?'0.0.0.0':'127.0.0.1',()=>console.log('Painel: '+(auth.origin?.origin||'http://127.0.0.1:8765')));
+const port=auth.enabled?Number(process.env.PORT||8765):8765;
+server.listen(port,auth.enabled?'0.0.0.0':'127.0.0.1',()=>console.log('Painel: '+(auth.enabled?.origin||'http://127.0.0.1:8765')));
