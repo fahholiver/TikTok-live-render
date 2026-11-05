@@ -15,3 +15,21 @@ O conector TikTok é não oficial.
 
 Para validar localmente, execute npm ci e npm test. Para iniciar o modo
 local, execute npm start e abra http://127.0.0.1:8765.
+
+## Back4app + EulerStream (eventos reais)
+
+Variáveis em Back4app → Environment:
+
+- `READER_PLATFORM=back4app`
+- `READER_PASSWORD` (mínimo 16 caracteres)
+- `EULERSTREAM_API_KEY`: chave do plano Community do EulerStream. Com ela,
+  o servidor usa o WebSocket gerenciado `wss://ws.eulerstream.com` em vez da
+  rota de assinatura, que exige o plano Business.
+
+Ao conectar, os logs do container mostram linhas `[EulerStream @perfil]`:
+"WebSocket aberto", o primeiro evento de cada tipo com os nomes dos campos e,
+ao fechar, o código e a contagem de eventos recebidos. Se chegarem eventos e
+nada aparecer no painel, essas linhas mostram o formato real. A chave não é
+registrada nos logs.
+
+`npm test` também valida esse caminho com um servidor WebSocket falso.

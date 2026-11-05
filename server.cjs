@@ -16,57 +16,78 @@ io.use((socket,next)=>{
  if(auth.overlay(socket.handshake.auth?.overlayKey))return next();
  next(new Error('Acesso não autorizado'));
 });
+const eulerCloseErrors = {
+ 4400: 'O EulerStream recusou os parâmetros da conexão.',
+ 4401: 'A chave do EulerStream foi recusada.',
+ 4403: 'A conta EulerStream não tem acesso a esta conexão.',
+ 4404: 'O perfil não está ao vivo.',
+ 4429: 'Limite de conexões do EulerStream atingido.'
+};
+async function frameText(data) {
+ if (typeof data === 'string') return data;
+ if (data instanceof ArrayBuffer) return Buffer.from(data).toString('utf8');
+ if (ArrayBuffer.isView(data)) return Buffer.from(data.buffer, data.byteOffset, data.byteLength).toString('utf8');
+ if (typeof data?.text === 'function') return data.text();
+ return '';
+}
+function eulerEvents(frame) {
+ const list = Array.isArray(frame) ? frame : Array.isArray(frame?.messages) ? frame.messages : [frame];
+ return list.map(event => ({
+  type: String(event?.type ?? event?.event ?? event?.method ?? ''),
+  data: event?.data ?? event?.payload ?? event
+ }));
+}
 function managedConnection(username, apiKey) {
  const handlers = new Map();
- let socket;
- let cancel;
+ const seen = new Map();
+ let socket, cancel, opened = false, logged = 0;
  const emit = (event, value) => handlers.get(event)?.(value);
+ const tag = `[EulerStream @${username}]`;
  return {
   on(event, handler) { handlers.set(event, handler); },
   connect() {
    return new Promise((resolve, reject) => {
     cancel = () => reject(new Error('Conexão cancelada.'));
-    const url = new URL('wss://ws.eulerstream.com');
+    const url = new URL(process.env.EULERSTREAM_WS_URL || 'wss://ws.eulerstream.com');
     url.searchParams.set('uniqueId', username);
     url.searchParams.set('apiKey', apiKey);
     socket = new WebSocket(url);
-    socket.addEventListener('open', resolve, { once: true });
-    socket.addEventListener('message', ({data}) => {
+    socket.binaryType = 'arraybuffer';
+    socket.addEventListener('open', () => { opened = true; console.log(tag, 'WebSocket aberto.'); resolve(); }, { once: true });
+    socket.addEventListener('message', async ({data}) => {
+     const text = await frameText(data);
      let frame;
-     try { frame = JSON.parse(data); } catch { return; }
-     for (const event of Array.isArray(frame?.messages) ? frame.messages : [frame]) {
-      const payload = event?.data;
+     try { frame = JSON.parse(text); }
+     catch {
+      if (logged++ < 5) console.log(tag, 'Frame não JSON recebido:', typeof data, text.length, 'bytes');
+      return;
+     }
+     for (const {type, data: payload} of eulerEvents(frame)) {
+      if (!seen.has(type)) console.log(tag, 'Primeiro evento do tipo', JSON.stringify(type), '· campos:', Object.keys(payload || {}).slice(0, 15).join(','));
+      seen.set(type, (seen.get(type) || 0) + 1);
       if (!payload) continue;
-      if (event.type === 'WebcastChatMessage') emit(WebcastEvent.CHAT, {...payload, comment: payload.content ?? payload.comment});
-      if (event.type === 'WebcastGiftMessage') emit(WebcastEvent.GIFT, {
+      if (/chat/i.test(type)) emit(WebcastEvent.CHAT, {...payload, comment: payload.comment ?? payload.content});
+      else if (/gift/i.test(type)) emit(WebcastEvent.GIFT, {
        ...payload,
-       giftName: payload.giftName ?? payload.gift?.name,
-       repeatCount: payload.repeatCount ?? payload.giftCount
+       giftName: payload.giftName ?? payload.gift?.name ?? payload.giftDetails?.giftName,
+       repeatCount: payload.repeatCount ?? payload.giftCount ?? payload.comboCount
       });
-      if (event.type === 'WebcastControlMessage' && Number(payload.action) === 3) emit(WebcastEvent.STREAM_END);
+      else if (/control/i.test(type) && Number(payload.action) === 3) emit(WebcastEvent.STREAM_END);
      }
     });
     socket.addEventListener('error', () => {
-     reject(new Error('O WebSocket do EulerStream não abriu. Confira a chave e os limites da conta.'));
+     if (!opened) reject(new Error('O WebSocket do EulerStream não abriu. Confira a chave e os limites da conta.'));
     });
-    socket.addEventListener('close', ({code}) => {
-     const errors = {
-      4401: 'A chave do EulerStream foi recusada.',
-      4403: 'A conta EulerStream não tem acesso a esta conexão.',
-      4404: 'O perfil não está ao vivo.',
-      4429: 'Limite de conexões do EulerStream atingido.'
-     };
-     if (errors[code]) {
-      reject(new Error(errors[code]));
-      emit(ControlEvent.ERROR, new Error(errors[code]));
-     }
+    socket.addEventListener('close', ({code, reason}) => {
+     console.log(tag, 'WebSocket fechado:', code, reason || '', '· eventos recebidos:', JSON.stringify(Object.fromEntries(seen)));
+     const message = eulerCloseErrors[code] || (code >= 4000 ? `O EulerStream encerrou a conexão (código ${code}${reason ? ': ' + reason : ''}).` : '');
+     if (!opened) return reject(new Error(message || `O EulerStream encerrou a conexão (código ${code}).`));
      if (code === 4005) emit(WebcastEvent.STREAM_END);
-     else emit(ControlEvent.DISCONNECTED);
-     reject(new Error('O EulerStream encerrou a conexão.'));
+     else emit(ControlEvent.DISCONNECTED, message || undefined);
     });
    });
   },
-  disconnect() { cancel?.(); socket?.close(); }
+  disconnect() { cancel?.(); socket?.close(1000); }
  };
 }
 
@@ -97,7 +118,7 @@ io.on('connection',socket=>{
    publish({user:d.user?.nickname||d.nickname||d.user?.uniqueId||d.uniqueId||'Viewer',text:`Enviou ${name} ×${Number(d.repeatCount)||1}`,gift:true});
   });
   live.on(ControlEvent.ERROR,e=>{if(current())io.emit('notice',String(e?.message||e?.exception?.message||'Erro na comunicação com o TikTok').slice(0,400));});
-  live.on(ControlEvent.DISCONNECTED,()=>{if(current()){stop();status('idle','Conexão encerrada. Verifique a live e conecte novamente.');}});
+  live.on(ControlEvent.DISCONNECTED,reason=>{if(current()){stop();if(typeof reason==='string')status('error',reason);else status('idle','Conexão encerrada. Verifique a live e conecte novamente.');}});
   live.on(WebcastEvent.STREAM_END,()=>{if(current()){stop();status('idle','Esta live terminou.');}});
   const timeout=setTimeout(()=>{if(current()){stop();status('error','Tempo de conexão esgotado. Confirme que o perfil está ao vivo e tente novamente.');}},45000);
   try{await live.connect();if(!current()){try{live.disconnect();}catch{}return;}status('live',`Ao vivo · @${username}`,username);}
