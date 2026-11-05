@@ -22,7 +22,7 @@ function overlay(key) { return equal(key, overlayToken); }
 function requestOriginFor(req) {
   if (origin) return origin.origin;
   const host = req.headers.host || '';
-  return back4app && /^[a-z0-9-]+\.b4a\.run$/i.test(host) ? 'https://' + host.toLowerCase() : null;
+  return back4app && /^[a-z0-9-]+\.(?:b4a\.run|back4\.app)$/i.test(host) ? 'https://' + host.toLowerCase() : null;
 }
 function validRequest(req) {
   const host = req.headers.host || '';
