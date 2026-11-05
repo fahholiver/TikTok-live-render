@@ -4,7 +4,7 @@
   "description": "Leitor local de comentários e presentes TikTok com TTS e overlay OBS",
   "scripts": {
     "start": "node server.cjs",
-    "test": "node tests/integration.cjs"
+    "test": "node tests/integration.cjs && node tests/euler-managed.cjs"
   },
   "keywords": [],
   "author": "",
