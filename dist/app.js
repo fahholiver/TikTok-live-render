@@ -1,0 +1,24 @@
+const $=id=>document.getElementById(id), overlay=new URLSearchParams(location.search).get('overlay')==='1';
+if(overlay)document.body.classList.add('overlay');
+const overlayKey=new URLSearchParams(location.search).get("key");
+const socket=io({auth:{overlayKey}}), synth=window.speechSynthesis;let phase='idle',voices=[],queue=[],speaking=false,current=null;
+const saved=(()=>{try{return JSON.parse(localStorage.getItem('liveReader')||'{}')||{}}catch{return {}}})();
+for(const id of ['username','rate','volume','voice'])if(saved[id]!=null)$(id).value=saved[id];
+if(saved.tts!=null)$('tts').checked=saved.tts;
+function save(){try{localStorage.setItem('liveReader',JSON.stringify(Object.fromEntries(['username','rate','volume','voice','tts'].map(id=>[id,id==='tts'?$(id).checked:$(id).value]))));}catch{}}
+function loadVoices(){const selection=$('voice').value||saved.voice;voices=synth?.getVoices()||[];$('voice').replaceChildren();const def=new Option('Automática · português brasileiro','');$('voice').append(def);for(const v of voices)$('voice').append(new Option(`${v.name} (${v.lang})`,v.voiceURI));$('voice').value=selection||'';}
+loadVoices();if(synth)synth.addEventListener('voiceschanged',loadVoices);else{$('tts').checked=false;$('tts').disabled=true;$('notice').textContent='Este navegador não oferece leitura de voz.';}
+function stopSpeech(){queue=[];current=null;speaking=false;synth?.cancel();}
+function pump(){if(speaking||!queue.length)return;const u=new SpeechSynthesisUtterance(queue.shift());current=u;speaking=true;u.lang='pt-BR';u.rate=Number($('rate').value);u.volume=Number($('volume').value);u.voice=voices.find(v=>v.voiceURI===$('voice').value)||voices.find(v=>v.lang==='pt-BR')||null;u.onend=u.onerror=()=>{if(current!==u)return;speaking=false;current=null;pump();};synth.speak(u);}
+function speak(text,force=false){if(overlay||!synth||(!force&&!$('tts').checked))return;if(queue.length>=15)queue.shift();queue.push(text.slice(0,500));pump();}
+function render(e,read=true){const feed=overlay?$('overlayFeed'):$('feed');$('empty')?.remove();const card=document.createElement('div');card.className='entry'+(e.gift?' gift':'');const name=document.createElement('strong');name.textContent=e.user;card.append(name);if(e.demo){const badge=document.createElement('span');badge.className='demo';badge.textContent='TESTE';name.append(badge);}const text=document.createElement('div');text.textContent=e.text;card.append(text);feed.append(card);while(feed.children.length>(overlay?5:200))feed.firstChild.remove();if(overlay)setTimeout(()=>card.remove(),18000);else feed.scrollTop=feed.scrollHeight;if(read)speak(`${e.user} ${e.gift?'': 'disse: '}${e.text}`);}
+socket.on('entry',render);socket.on('history',entries=>{(overlay?$('overlayFeed'):$('feed')).replaceChildren();for(const e of entries.slice(overlay?-5:-200))render(e,false);});socket.on('clear',()=>{(overlay?$('overlayFeed'):$('feed')).replaceChildren();stopSpeech();});
+socket.on('status',s=>{phase=s.phase;$('status').textContent=s.message;$('status').dataset.phase=phase;$('connect').disabled=phase==='connecting'||phase==='live';$('disconnect').textContent=phase==='connecting'?'Cancelar':'Desconectar';$('username').disabled=phase==='connecting'||phase==='live';});
+socket.on('notice',m=>$('notice').textContent=m);socket.on('disconnect',()=>{phase='idle';$('status').textContent='Servidor desconectado. Aguardando reconexão.';$('connect').disabled=true;stopSpeech();});socket.on('connect',()=>{$('notice').textContent='';$('connect').disabled=false;});
+$('connectionForm').onsubmit=e=>{e.preventDefault();save();$('notice').textContent='';stopSpeech();speak('Conectando à live.',true);socket.emit('connectLive',$('username').value);};$('disconnect').onclick=()=>{socket.emit('disconnectLive');stopSpeech();};
+for(const id of ['username','rate','volume','voice','tts'])$(id).addEventListener('change',()=>{save();if(id==='tts'&&!$('tts').checked)stopSpeech();});
+$('rate').oninput=()=>$('rateText').textContent=$('rate').value+'x';$('rate').oninput();$('testVoice').onclick=()=>{stopSpeech();speak('Teste de voz. Pronto para ler os comentários da sua live.',true);};$('stopVoice').onclick=stopSpeech;
+$('demoComment').onclick=()=>socket.emit('demo','comment');$('demoGift').onclick=()=>socket.emit('demo','gift');$('clear').onclick=()=>{$('feed').replaceChildren();stopSpeech();};
+let url=location.origin+'/?overlay=1';
+if(!overlay) fetch('/api/overlay-url').then(r=>r.ok?r.json():null).then(data=>{if(!data?.url)return;url=data.url;$('overlayUrl').textContent=url;$('overlayLink').href=url;}).catch(()=>{});$('overlayUrl').textContent=url;$('copy').onclick=async()=>{try{await navigator.clipboard.writeText(url);$('copy').textContent='URL copiada';setTimeout(()=>$('copy').textContent='Copiar URL do OBS',2000);}catch{$('notice').textContent='Copie a URL exibida abaixo do botão.';}};
+window.addEventListener('beforeunload',stopSpeech);
