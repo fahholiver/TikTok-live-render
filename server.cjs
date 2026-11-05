@@ -5,6 +5,7 @@ const { TikTokLiveConnection, WebcastEvent, ControlEvent } = require('tiktok-liv
 const app = express(), server = http.createServer(app);
 const auth = require('./cloud-auth.cjs');
 const io = new Server(server, {allowRequest:(req,cb)=>cb(null,auth.validRequest(req))});
+app.get('/healthz', (_req,res)=>res.status(200).send('ok'));
 app.use(auth.middleware);
 app.get('/transport.js', (req,res)=>res.redirect('/socket.io/socket.io.js'));
 app.get('/api/overlay-url', (req,res)=>res.json({url: auth.origin ? auth.origin.origin+'/?overlay=1&key='+auth.overlayToken : null}));
