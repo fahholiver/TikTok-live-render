@@ -1,0 +1,117 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+  <base target="_top">
+  <meta charset="utf-8">
+  <style>
+    :root { --bg:#f6f7f9; --card:#fff; --text:#16181d; --muted:#5f6672; --line:#d9dde3; --accent:#1a73e8; --ok:#188038; --err:#c5221f; }
+    @media (prefers-color-scheme: dark) {
+      :root { --bg:#121417; --card:#1c1f24; --text:#eceff3; --muted:#a2a9b4; --line:#30353d; --accent:#8ab4f8; --ok:#81c995; --err:#f28b82; }
+    }
+    * { box-sizing:border-box; }
+    body { margin:0; padding:16px; background:var(--bg); color:var(--text); font:16px/1.45 system-ui, sans-serif; }
+    main { max-width:560px; margin:0 auto; }
+    h1 { font-size:1.3rem; margin:0 0 12px; }
+    form, .job { background:var(--card); border:1px solid var(--line); border-radius:12px; padding:14px; }
+    label { display:block; font-size:.9rem; color:var(--muted); margin:10px 0 4px; }
+    textarea, input, select { width:100%; font:inherit; color:inherit; background:transparent; border:1px solid var(--line); border-radius:8px; padding:10px; }
+    textarea { min-height:110px; resize:vertical; }
+    .row { display:flex; gap:8px; margin-top:14px; }
+    button { flex:1; font:inherit; font-weight:600; padding:12px; border-radius:8px; border:1px solid var(--accent); background:var(--accent); color:var(--bg); }
+    button.secondary { background:transparent; color:var(--accent); }
+    button:disabled { opacity:.5; }
+    #msg { min-height:1.4em; margin:10px 2px; color:var(--muted); font-size:.9rem; }
+    #msg.err { color:var(--err); }
+    .jobs { display:grid; gap:10px; }
+    .job p { margin:0 0 6px; overflow-wrap:anywhere; }
+    .meta { font-size:.85rem; color:var(--muted); }
+    .pronto { color:var(--ok); font-weight:600; }
+    .erro { color:var(--err); font-weight:600; }
+    a { color:var(--accent); }
+  </style>
+</head>
+<body>
+<main>
+  <h1>Veo → Google Drive</h1>
+  <form id="f">
+    <label for="prompt">Prompt do vídeo</label>
+    <textarea id="prompt" name="prompt" required placeholder="Ex.: drone sobrevoando uma praia ao pôr do sol, ondas calmas, estilo cinematográfico"></textarea>
+    <label for="aspectRatio">Formato</label>
+    <select id="aspectRatio" name="aspectRatio">
+      <option value="9:16">9:16 vertical (TikTok/Reels)</option>
+      <option value="16:9">16:9 horizontal</option>
+    </select>
+    <label for="negativePrompt">Evitar (opcional)</label>
+    <input id="negativePrompt" name="negativePrompt" placeholder="Ex.: texto na tela, baixa qualidade">
+    <div class="row">
+      <button id="go" type="submit">Gerar vídeo</button>
+    </div>
+  </form>
+  <div id="msg"></div>
+  <div class="row" style="margin:0 0 10px">
+    <button class="secondary" type="button" id="refresh">Atualizar</button>
+    <button class="secondary" type="button" id="clear">Limpar concluídos</button>
+  </div>
+  <div class="jobs" id="jobs"></div>
+</main>
+<script>
+  var $ = function (id) { return document.getElementById(id); };
+  var timer = null;
+
+  function say(text, isErr) { $('msg').textContent = text || ''; $('msg').className = isErr ? 'err' : ''; }
+  function fail(err) { $('go').disabled = false; say(err.message || String(err), true); }
+
+  function render(jobs) {
+    var box = $('jobs');
+    box.textContent = '';
+    if (!jobs.length) { box.innerHTML = '<p class="meta">Nenhum vídeo ainda.</p>'; }
+    jobs.forEach(function (j) {
+      var el = document.createElement('div');
+      el.className = 'job';
+      var p = document.createElement('p'); p.textContent = j.prompt; el.appendChild(p);
+      var m = document.createElement('div'); m.className = 'meta';
+      var st = document.createElement('span'); st.className = j.status; st.textContent = j.status;
+      m.appendChild(st);
+      m.appendChild(document.createTextNode(' · ' + j.aspect + ' · ' + new Date(j.createdAt).toLocaleString()));
+      el.appendChild(m);
+      if (j.fileUrl) {
+        var a = document.createElement('a'); a.href = j.fileUrl; a.target = '_blank'; a.rel = 'noopener';
+        a.textContent = 'Abrir no Drive'; el.appendChild(a);
+      }
+      if (j.error) { var e = document.createElement('div'); e.className = 'meta erro'; e.textContent = j.error; el.appendChild(e); }
+      box.appendChild(el);
+    });
+    var busy = jobs.some(function (j) { return j.status === 'gerando'; });
+    clearTimeout(timer);
+    if (busy) timer = setTimeout(load, 30000);
+  }
+
+  function load() { google.script.run.withSuccessHandler(render).withFailureHandler(fail).listJobs(); }
+
+  $('f').addEventListener('submit', function (ev) {
+    ev.preventDefault();
+    $('go').disabled = true;
+    say('Enviando para o Veo…');
+    google.script.run
+      .withSuccessHandler(function (jobs) {
+        $('go').disabled = false;
+        $('prompt').value = '';
+        say('Pedido enviado. Leva de 1 a 6 minutos; pode fechar esta página.');
+        render(jobs);
+      })
+      .withFailureHandler(fail)
+      .startJob({ prompt: $('prompt').value, aspectRatio: $('aspectRatio').value, negativePrompt: $('negativePrompt').value });
+  });
+
+  $('refresh').addEventListener('click', function () {
+    say('Verificando…');
+    google.script.run.withSuccessHandler(function (j) { say(''); render(j); }).withFailureHandler(fail).pollJobs();
+  });
+  $('clear').addEventListener('click', function () {
+    google.script.run.withSuccessHandler(render).withFailureHandler(fail).clearFinished();
+  });
+
+  load();
+</script>
+</body>
+</html>
