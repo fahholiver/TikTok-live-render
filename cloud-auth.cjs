@@ -36,6 +36,8 @@ function validRequest(req) {
     (!requestOrigin || /^http:\/\/(127\.0\.0\.1|localhost):8765$/.test(requestOrigin));
 }
 function loginPage(res, invalid = false) {
+  // Preserve the same-origin header on form submissions in mobile browsers.
+  res.set('Referrer-Policy', 'same-origin');
   return res.status(invalid ? 401 : 200).type('html').send(`<!doctype html>
 <html lang="pt-BR"><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
 <title>Entrar · TikTok Live Reader</title>
