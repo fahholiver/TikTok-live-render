@@ -64,3 +64,16 @@ https://ai.google.dev/gemini-api/docs/pricing antes de usar. O modelo padrão
   status **erro** e o motivo.
 - Se você alterar o código, faça *Implantar > Gerenciar implantações > Editar >
   Nova versão* para a URL usar a versão nova.
+
+## Modo nuvem (sem instalar nada)
+
+A pasta [`cloud/`](cloud) faz o mesmo trabalho numa sessão de nuvem do Claude
+Code: `veo_to_drive.py` gera o vídeo, salva na pasta **Veo** do Drive e grava o
+histórico em `veo-relatorio.json`. `build_report.py` monta a página do
+relatório a partir desse histórico.
+
+Precisa de `GDRIVE_CLIENT_ID`, `GDRIVE_CLIENT_SECRET` e `GDRIVE_REFRESH_TOKEN`
+no ambiente. Também precisa de uma chave Gemini com faturamento, em
+`GEMINI_API_KEY` ou salva como segredo de rede do host
+`generativelanguage.googleapis.com`. Use `--fake-veo` para testar o Drive sem
+gastar com o Veo.
