@@ -4,8 +4,13 @@ A pasta dist é a demonstração estática do painel. Os botões de teste
 enviam eventos também ao overlay aberto no mesmo navegador e perfil.
 
 Para receber eventos reais, implante o projeto como serviço Node.js no Render.
-Use o Blueprint render.yaml e configure READER_PASSWORD com no mínimo 16
-caracteres. Entre no painel com o usuário reader e essa senha. O botão de copiar
+Use o Blueprint render.yaml e configure, no painel do Render:
+
+- READER_PASSWORD: senha do painel, com no mínimo 16 caracteres.
+- EULERSTREAM_API_KEY: chave da conta EulerStream (https://www.eulerstream.com).
+  Sem ela o serviço hospedado não consegue conectar à live.
+
+Depois de alterar variáveis, faça um novo deploy (Manual Deploy). Entre no painel com o usuário reader e essa senha. O botão de copiar
 fornece um link de leitura para o OBS. Compartilhe-o apenas com quem deve ver
 o feed. Alterar READER_PASSWORD invalida os links anteriores.
 

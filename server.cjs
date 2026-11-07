@@ -107,4 +107,4 @@ io.on('connection',socket=>{
 });
 server.on('error',e=>{console.error('Não foi possível iniciar:',e.message);process.exit(1);});
 const port=auth.enabled?Number(process.env.PORT||8765):8765;
-server.listen(port,auth.enabled?'0.0.0.0':'127.0.0.1',()=>console.log('Painel: '+(auth.enabled?.origin||'http://127.0.0.1:8765')));
+server.listen(port,auth.enabled?'0.0.0.0':'127.0.0.1',()=>console.log('Painel: '+(auth.origin?.origin||(auth.enabled?'porta '+port:'http://127.0.0.1:8765'))));
