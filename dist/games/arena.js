@@ -175,7 +175,7 @@
   G.register({
     id: 'arena', title: 'Arena do Empurrão', emoji: '🥊',
     blurb: 'Todo mundo numa plataforma que encolhe. Empurre os outros para a lava: o último de pé vence.',
-    help: ['💬 Comente para entrar na arena', '💬 Comentar de novo = investida  ·  ❤️ Curtidas = empurrão', '🎁 Presente = onda de choque'],
+    help: ['💬 Comente para entrar na arena', '💬 De novo = investida  ·  ❤️ Curtida = empurrão', '🎁 Presente = onda de choque'],
     toastY: 470,
     simChat: () => G.pick(['vou ganhar', 'sai da frente', 'bora', 'kkkk', 'empurra!']),
     init, update, draw, event
