@@ -1,0 +1,101 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Jogos da Live</title>
+<style>
+*{box-sizing:border-box}
+html,body{margin:0;height:100%;background:#020617;color:#f8fafc;font:15px system-ui,sans-serif;overflow:hidden}
+body.obs,html:has(body.obs){background:transparent}
+#stage{position:absolute;left:50%;top:50%;transform:translate(-50%,-50%);display:none}
+body.playing #stage{display:block}
+#menu{height:100%;overflow:auto;padding:24px 16px}
+body.playing #menu{display:none}
+#menu main{max-width:880px;margin:auto}
+h1{font-size:26px;margin:0 0 6px}
+#menu>main>p{color:#94a3b8;line-height:1.5}
+.cards{display:grid;grid-template-columns:repeat(auto-fill,minmax(240px,1fr));gap:14px;margin-top:18px}
+.card{background:#1e293b;border:1px solid #334155;border-radius:14px;padding:18px;display:flex;flex-direction:column;gap:10px}
+.card h2{margin:0;font-size:19px}
+.card p{margin:0;color:#cbd5e1;line-height:1.45;flex:1}
+a.button,button{background:#0284c7;color:#fff;border:0;padding:10px 14px;border-radius:8px;cursor:pointer;font:600 14px system-ui;text-decoration:none;display:inline-block;text-align:center}
+.pink{background:#ff0050!important}
+.ghost{background:#334155!important}
+#bar{position:fixed;top:10px;left:10px;right:10px;display:none;gap:8px;flex-wrap:wrap;align-items:center;z-index:2;background:rgba(15,23,42,.85);padding:8px;border-radius:12px;max-width:780px}
+body.playing:not(.obs) #bar{display:flex}
+#bar label{display:flex;align-items:center;gap:6px;font-size:14px}
+#bar input{width:18px;height:18px}
+#bar[hidden]{display:none!important}
+#copyMsg{font-size:13px;color:#a5f3fc;overflow-wrap:anywhere}
+</style>
+</head>
+<body>
+<div id="menu"><main>
+  <a class="button ghost" href="/">← Voltar ao painel</a>
+  <h1 style="margin-top:16px">🎮 Jogos da Live</h1>
+  <p>Escolha um jogo. Os espectadores jogam pelos comentários, curtidas e presentes da sua live.
+  No OBS, adicione uma fonte Navegador com a URL do jogo no tamanho 1080 × 1920.</p>
+  <div class="cards" id="cards"></div>
+</main></div>
+<div id="bar">
+  <a class="button ghost" href="games.html" id="back">← Jogos</a>
+  <label><input type="checkbox" id="sim"> Simular público</label>
+  <button id="reset" class="ghost">Reiniciar</button>
+  <button id="copy" class="pink">Copiar URL do OBS</button>
+  <button id="hide" class="ghost" title="Esconder esta barra">✕</button>
+  <span id="copyMsg"></span>
+</div>
+<canvas id="stage"></canvas>
+<script src="/socket.io/socket.io.js" onerror="window.io=undefined"></script>
+<script src="games/core.js"></script>
+<script src="games/marble-race.js"></script>
+<script src="games/arena.js"></script>
+<script src="games/team-war.js"></script>
+<script src="games/creatures.js"></script>
+<script>
+(() => {
+  const G = window.Games, params = new URLSearchParams(location.search);
+  const $ = id => document.getElementById(id);
+  const withKey = id => 'games.html?game=' + encodeURIComponent(id) + (G.key ? '&key=' + encodeURIComponent(G.key) : '');
+  if (G.obs) document.body.classList.add('obs');
+  for (const g of G.list()) {
+    const card = document.createElement('div');
+    card.className = 'card';
+    const title = document.createElement('h2');
+    title.textContent = `${g.emoji} ${g.title}`;
+    const blurb = document.createElement('p');
+    blurb.textContent = g.blurb;
+    const open = document.createElement('a');
+    open.className = 'button pink';
+    open.href = withKey(g.id);
+    open.textContent = 'Abrir jogo';
+    card.append(title, blurb, open);
+    $('cards').append(card);
+  }
+  const id = params.get('game');
+  if (id && G.start(id)) {
+    document.body.classList.add('playing');
+    const sim = params.get('sim') === '1';
+    $('sim').checked = sim;
+    G.setSimulate(sim);
+  }
+  $('back').href = G.key ? 'games.html?key=' + encodeURIComponent(G.key) : 'games.html';
+  $('sim').onchange = () => G.setSimulate($('sim').checked);
+  $('reset').onclick = () => G.reset();
+  $('hide').onclick = () => { $('bar').hidden = true; };
+  $('copy').onclick = async () => {
+    let url = location.origin + '/' + withKey(id) + (G.key ? '' : '&obs=1');
+    try {
+      const res = await fetch('/api/overlay-url');
+      const data = res.ok ? await res.json() : null;
+      if (data?.games) url = data.games + '&game=' + encodeURIComponent(id);
+    } catch {}
+    $('copyMsg').textContent = url;
+    try { await navigator.clipboard.writeText(url); $('copy').textContent = 'URL copiada'; setTimeout(() => $('copy').textContent = 'Copiar URL do OBS', 2000); } catch {}
+  };
+  G.boot();
+})();
+</script>
+</body>
+</html>

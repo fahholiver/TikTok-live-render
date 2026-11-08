@@ -64,7 +64,8 @@ function middleware(req, res, next) {
     });
   }
   if (req.path === '/' && req.query.overlay === '1') return overlay(req.query.key) ? next() : res.sendStatus(403);
-  if (req.path === '/app.js' || req.path === '/transport.js') return next();
+  if (req.path === '/games.html' && req.query.key !== undefined) return overlay(req.query.key) ? next() : res.sendStatus(403);
+  if (req.path === '/app.js' || req.path === '/transport.js' || /^\/games\/[a-z-]+\.js$/.test(req.path)) return next();
   if (panel(req)) return next();
   const basic = 'Basic ' + Buffer.from('reader:' + password).toString('base64');
   if (equal(req.headers.authorization, basic)) {

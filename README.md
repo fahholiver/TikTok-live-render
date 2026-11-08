@@ -18,5 +18,21 @@ O serviço usa uma live pública por instância. Digite o @ quando a live
 estiver aberta. A voz sai do navegador do painel e o overlay é silencioso.
 O conector TikTok é não oficial.
 
+## Jogos da live
+
+O painel tem um botão "Abrir jogos" (página /games.html) com quatro jogos
+controlados pelo público:
+
+- Corrida de Bolinhas: comentar entra na corrida, presente dá turbo.
+- Arena do Empurrão: comentar entra, presente solta uma onda de choque.
+  O último que ficar na plataforma vence.
+- Guerra de Times: comentar "azul" ou "vermelho" escolhe o time. Comentários
+  viram soldados e presentes viram campeões.
+- Bichinhos Evolutivos: cada espectador choca um ovo, que evolui com
+  comentários, curtidas e presentes.
+
+Em cada jogo, "Simular público" testa sem live. "Copiar URL do OBS" gera o
+link com a chave de leitura. No OBS, use uma fonte Navegador de 1080 × 1920.
+
 Para validar localmente, execute npm ci e npm test. Para iniciar o modo
 local, execute npm start e abra http://127.0.0.1:8765.

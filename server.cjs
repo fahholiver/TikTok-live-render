@@ -8,7 +8,7 @@ const io = new Server(server, {allowRequest:(req,cb)=>cb(null,auth.validRequest(
 app.get('/healthz', (_req,res)=>res.status(200).send('ok'));
 app.use(auth.middleware);
 app.get('/transport.js', (req,res)=>res.redirect('/socket.io/socket.io.js'));
-app.get('/api/overlay-url', (req,res)=>res.json({url: auth.enabled ? auth.requestOriginFor(req)+'/?overlay=1&key='+auth.overlayToken : null}));
+app.get('/api/overlay-url', (req,res)=>{const base=auth.enabled?auth.requestOriginFor(req):null;res.json({url: base ? base+'/?overlay=1&key='+auth.overlayToken : null, games: base ? base+'/games.html?key='+auth.overlayToken : null});});
 app.use(express.static(__dirname+'/dist'));
 io.use((socket,next)=>{
  if(!auth.enabled) return next();
@@ -43,6 +43,7 @@ function managedConnection(username, apiKey) {
        giftName: payload.giftName ?? payload.gift?.name,
        repeatCount: payload.repeatCount ?? payload.giftCount
       });
+      if (event.type === 'WebcastLikeMessage') emit(WebcastEvent.LIKE, payload);
       if (event.type === 'WebcastControlMessage' && Number(payload.action) === 3) emit(WebcastEvent.STREAM_END);
      }
     });
@@ -70,6 +71,11 @@ function managedConnection(username, apiKey) {
  };
 }
 
+function viewer(d){
+ const u=d.user||{}, name=u.nickname||d.nickname||u.uniqueId||d.uniqueId||'Viewer';
+ const avatar=[u.avatarThumb?.url?.[0],u.avatarMedium?.url?.[0],u.profilePicture?.url?.[0],u.profilePictureUrl,d.profilePictureUrl].find(v=>typeof v==='string'&&/^https:\/\//.test(v)&&v.length<1500);
+ return {user:String(name).slice(0,60),uid:String(u.uniqueId||d.uniqueId||u.userId||d.userId||name).slice(0,64),...(avatar?{avatar}:{})};
+}
 let connection=null, generation=0, state={phase:'idle',message:'Desconectado',username:''}, history=[];
 function status(phase,message,username=state.username){state={phase,message,username};io.emit('status',state);}
 function stop(){generation++;const old=connection;connection=null;if(old){try{Promise.resolve(old.disconnect()).catch(()=>{});}catch{}}}
@@ -88,13 +94,15 @@ io.on('connection',socket=>{
   stop();const ticket=generation;history=[];io.emit('clear');status('connecting','Conectando à live…',username);
   const live=apiKey ? managedConnection(username,apiKey) : new TikTokLiveConnection(username,{enableExtendedGiftInfo:true,processInitialData:false});connection=live;
   const current=()=>ticket===generation;
-  live.on(WebcastEvent.CHAT,d=>{if(current())publish({user:d.user?.nickname||d.nickname||d.user?.uniqueId||d.uniqueId||'Viewer',text:String(d.comment||'').slice(0,1500),gift:false});});
+  live.on(WebcastEvent.CHAT,d=>{if(current())publish({...viewer(d),text:String(d.comment||'').slice(0,1500),gift:false});});
+  live.on(WebcastEvent.LIKE,d=>{if(current())io.emit('like',{...viewer(d),count:Math.min(Math.max(Number(d.likeCount)||1,1),1000)});});
   live.on(WebcastEvent.GIFT,d=>{
    if(!current())return;
    const type=Number(d.giftDetails?.giftType??d.gift?.giftType??d.giftType);
    if(type===1&&!d.repeatEnd)return;
    const name=d.extendedGiftInfo?.name||d.giftDetails?.giftName||d.gift?.name||d.giftName||`Presente ${d.giftId||''}`;
-   publish({user:d.user?.nickname||d.nickname||d.user?.uniqueId||d.uniqueId||'Viewer',text:`Enviou ${name} ×${Number(d.repeatCount)||1}`,gift:true});
+   const count=Number(d.repeatCount)||1, diamonds=Number(d.giftDetails?.diamondCount??d.gift?.diamondCount??d.extendedGiftInfo?.diamond_count??d.diamondCount)||1;
+   publish({...viewer(d),text:`Enviou ${name} ×${count}`,gift:true,giftName:String(name).slice(0,60),count,coins:Math.min(diamonds*count,1e6)});
   });
   live.on(ControlEvent.ERROR,e=>{if(current())io.emit('notice',String(e?.message||e?.exception?.message||'Erro na comunicação com o TikTok').slice(0,400));});
   live.on(ControlEvent.DISCONNECTED,()=>{if(current()){stop();status('idle','Conexão encerrada. Verifique a live e conecte novamente.');}});
