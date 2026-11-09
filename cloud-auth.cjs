@@ -42,7 +42,7 @@ function loginPage(res, invalid = false) {
 <html lang="pt-BR"><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
 <title>Entrar · TikTok Live Reader</title>
 <style>body{margin:0;min-height:100dvh;display:grid;place-items:center;background:#0f172a;color:#f8fafc;font:16px system-ui}main{box-sizing:border-box;width:min(92%,400px);padding:24px;background:#1e293b;border:1px solid #475569;border-radius:14px}h1{margin-top:0;font-size:1.5rem}form{display:grid;gap:12px}input,button{box-sizing:border-box;width:100%;font:inherit;padding:12px;border-radius:8px}input{background:#0f172a;color:white;border:1px solid #64748b}button{background:#0369a1;color:white;border:0;font-weight:700}p{line-height:1.5}</style>
-<main><h1>TikTok Live Reader</h1><p>Use a senha do painel configurada no Back4app.</p>
+<main><h1>TikTok Live Reader</h1><p>Use a senha do painel (variável READER_PASSWORD da hospedagem).</p>
 ${invalid ? '<p role="alert">Senha incorreta. Confira o valor de READER_PASSWORD.</p>' : ''}
 <form action="/login" method="post"><label for="password">Senha do painel</label>
 <input id="password" name="password" type="password" autocomplete="current-password" required maxlength="512">
@@ -64,7 +64,8 @@ function middleware(req, res, next) {
     });
   }
   if (req.path === '/' && req.query.overlay === '1') return overlay(req.query.key) ? next() : res.sendStatus(403);
-  if (req.path === '/app.js' || req.path === '/transport.js') return next();
+  if (req.path === '/games.html' && req.query.key !== undefined) return overlay(req.query.key) ? next() : res.sendStatus(403);
+  if (req.path === '/app.js' || req.path === '/transport.js' || /^\/games\/[a-z-]+\.js$/.test(req.path)) return next();
   if (panel(req)) return next();
   const basic = 'Basic ' + Buffer.from('reader:' + password).toString('base64');
   if (equal(req.headers.authorization, basic)) {

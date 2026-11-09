@@ -3,8 +3,15 @@ services:
     name: tiktok-live-reader
     runtime: node
     plan: free
-    buildCommand: npm ci
+    buildCommand: npm ci --omit=dev
     startCommand: npm start
+    healthCheckPath: /healthz
     envVars:
+      - key: NODE_VERSION
+        value: "22"
+      - key: NODE_ENV
+        value: production
       - key: READER_PASSWORD
+        sync: false
+      - key: EULERSTREAM_API_KEY
         sync: false
