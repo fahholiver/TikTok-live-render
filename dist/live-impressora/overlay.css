@@ -1,0 +1,176 @@
+/* Palco fixo 1080x1920 (formato vertical do TikTok), escalado para caber na janela */
+* { box-sizing: border-box; margin: 0; padding: 0; }
+html, body { width: 100%; height: 100%; overflow: hidden; background: transparent; font-family: "Segoe UI", Roboto, Arial, sans-serif; }
+body.fundo-escuro { background: #050505; }
+body.fundo-verde { background: #00ff00; }
+
+#palco {
+  position: absolute; left: 50%; top: 50%;
+  width: 1080px; height: 1920px;
+  transform-origin: 0 0;
+  overflow: hidden;
+}
+body.fundo-escuro #palco { background: radial-gradient(ellipse at 50% 40%, #1a1a1a 0%, #050505 70%); }
+
+/* ------------------------------------------------ banner */
+.banner {
+  position: absolute; top: 330px; left: 50%; transform: translateX(-50%);
+  display: flex; align-items: center; gap: 22px;
+  padding: 18px 26px 18px 34px;
+  border: 4px solid #ff2d55; border-radius: 60px;
+  background: rgba(10, 10, 12, .92);
+  box-shadow: 0 0 24px rgba(255, 45, 85, .55), inset 0 0 18px rgba(255, 45, 85, .25);
+  color: #fff; font-weight: 900; font-size: 34px; letter-spacing: .5px; white-space: nowrap; max-width: 1040px;
+  z-index: 5;
+}
+.banner.oculto { display: none; }
+.banner-coracao { color: #ff2d55; font-size: 42px; animation: pulsar 1s infinite; }
+.banner-timer { background: #ff2d55; border-radius: 30px; padding: 4px 16px; font-size: 32px; font-variant-numeric: tabular-nums; }
+@keyframes pulsar { 50% { transform: scale(1.18); } }
+
+/* ------------------------------------------------ cena 3D */
+.cena {
+  position: absolute; left: 0; right: 0; top: 470px; height: 1180px;
+  perspective: 2600px; perspective-origin: 50% 10%;
+}
+.plano {
+  position: absolute; left: 40px; right: 40px; top: 0; height: 1500px;
+  transform-origin: 50% 0;
+  transform: rotateX(32deg);
+  transform-style: preserve-3d;
+}
+.mesa {
+  position: absolute; inset: 0 -200px -400px;
+  background:
+    repeating-linear-gradient(90deg, rgba(0,0,0,.18) 0 3px, transparent 3px 180px),
+    linear-gradient(90deg, #3b2412, #7a4a24 18%, #8c5a2e 50%, #7a4a24 82%, #3b2412);
+  box-shadow: inset 0 60px 80px rgba(0,0,0,.7);
+}
+/* trilhos laterais (por onde a ponte corre) */
+.trilho { position: absolute; top: 20px; height: 1500px; width: 22px; border-radius: 11px;
+  background: linear-gradient(90deg, #555, #eee 45%, #888 70%, #333); box-shadow: 0 0 14px rgba(0,0,0,.7); }
+.trilho.esq { left: 28px; }
+.trilho.dir { right: 28px; }
+
+/* papel: 840px de largura, comeca em y=70 do plano */
+/* trilhos laterais (por onde a ponte corre) */
+.trilho { position: absolute; top: 20px; height: 1500px; width: 22px; border-radius: 11px;
+  background: linear-gradient(90deg, #555, #eee 45%, #888 70%, #333); box-shadow: 0 0 14px rgba(0,0,0,.7); }
+.trilho.esq { left: 28px; }
+.trilho.dir { right: 28px; }
+
+/* papel: 840px de largura, comeca em y=70 do plano */
+.papel {
+  position: absolute; left: 80px; width: 840px; top: 70px; bottom: -700px;
+  background: #f4efe3;
+  box-shadow: 0 0 40px rgba(0,0,0,.6), inset 0 30px 40px rgba(0,0,0,.18);
+  overflow: hidden;
+}
+.rolo { position: absolute; left: 0; top: 0; width: 100%; height: 0; will-change: transform; }
+.rolo .divisa { position: absolute; left: 0; right: 0; height: 0; border-top: 3px dashed rgba(0,0,0,.12); }
+
+/* cartao impresso: posicionado numa vaga da grade, revelado de cima para baixo */
+.cartao {
+  position: absolute;
+  background: #fbf9f4; border: 3px solid #2b2b2b;
+  display: flex; flex-direction: column; align-items: center; justify-content: center;
+  color: #1b1b1b; text-align: center; padding: .4em;
+  clip-path: inset(0 0 100% 0);
+}
+.cartao .foto {
+  border-radius: 50%; overflow: hidden; border: .14em solid #2b2b2b; background: #9aa;
+  display: flex; align-items: center; justify-content: center; font-weight: 900; color: #fff; flex: none;
+}
+.cartao .foto img { width: 100%; height: 100%; object-fit: cover; display: block; }
+.cartao .foto span { font-size: 2.6em; }
+.cartao .titulo { margin-top: .35em; font-size: 1em; font-weight: 900; font-style: italic; text-transform: uppercase; line-height: 1.05; max-width: 100%; white-space: nowrap; }
+.cartao .titulo .c { color: #e3173e; font-style: normal; }
+.cartao .sub { margin-top: .2em; font-size: .62em; font-style: italic; color: #444; display: flex; align-items: center; gap: .3em; white-space: nowrap; max-width: 100%; overflow: hidden; }
+.cartao .sub img { height: 1.4em; }
+.cartao.t-vip { border: .25em solid #d4a017; background: linear-gradient(135deg, #fff8e1, #fbf9f4 40%, #fff3c4); box-shadow: inset 0 0 0 .1em #fff, inset 0 0 0 .2em #d4a017; }
+.cartao.t-vip .foto { border-color: #d4a017; }
+.cartao.t-vip .titulo { color: #7a5300; }
+.cartao.t-vip::before { content: "👑"; position: absolute; top: .1em; font-size: 1.4em; }
+
+/* corpo da impressora no fundo */
+.corpo {
+  position: absolute; left: 30px; right: 30px; top: -40px; height: 110px;
+  background: linear-gradient(#050505, #1d1d1d 70%, #333);
+  border-radius: 12px 12px 4px 4px; box-shadow: 0 14px 30px rgba(0,0,0,.8);
+  display: flex; align-items: flex-start; padding: 14px 24px;
+}
+.corpo span { color: #555; font-weight: 900; letter-spacing: 4px; font-size: 22px; }
+
+/* ponte: barra que atravessa o papel e anda para frente/tras (eixo Y) */
+.ponte { position: absolute; left: 15px; right: 15px; top: 70px; height: 0; will-change: transform; z-index: 3; }
+.barra {
+  position: absolute; left: 0; right: 0; top: -13px; height: 26px; border-radius: 13px;
+  background: linear-gradient(#f2f2f2, #9a9a9a 45%, #555 75%, #2a2a2a);
+  box-shadow: 0 16px 22px rgba(0,0,0,.55);
+}
+.barra::before, .barra::after { content: ""; position: absolute; top: -12px; width: 50px; height: 50px; border-radius: 10px; background: linear-gradient(#444, #111); }
+.barra::before { left: -6px; } .barra::after { right: -6px; }
+/* carro: anda ao longo da barra (eixo X). left = borda esquerda do papel */
+.carro { position: absolute; left: 65px; top: 0; width: 0; height: 0; will-change: transform; }
+.cabeca {
+  position: absolute; left: -45px; top: -34px; width: 90px; height: 62px;
+  background: linear-gradient(#5a5a5a, #1a1a1a); border: 2px solid #777; border-radius: 10px;
+  box-shadow: 0 18px 22px rgba(0,0,0,.7);
+}
+.cabeca .luz {
+  position: absolute; left: 50%; bottom: -30px; width: 46px; height: 46px; margin-left: -23px; border-radius: 50%;
+  background: radial-gradient(circle, #fff 0%, #cdeeff 30%, rgba(120,200,255,0) 70%); opacity: .3;
+}
+.cabeca.ativa .luz { opacity: 1; animation: piscar .1s infinite alternate; }
+.cabeca.varrendo { animation: zigue var(--periodo, .2s) linear var(--voltas, 9) alternate both; }
+@keyframes zigue { from { transform: translateX(calc(var(--amp, 0px) * -1)); } to { transform: translateX(var(--amp, 0px)); } }
+@keyframes piscar { to { opacity: .65; transform: scale(1.3); } }
+
+.luz-teto {
+  position: absolute; left: 160px; right: 160px; top: -30px; height: 40px;
+  background: radial-gradient(ellipse at 50% 0%, rgba(200,235,255,.65), transparent 70%);
+  filter: blur(4px); pointer-events: none;
+}
+
+/* ------------------------------------------------ lateral */
+.lateral {
+  position: absolute; right: 10px; top: 470px; width: 120px;
+  background: rgba(0,0,0,.6); border-radius: 18px; padding: 14px 6px;
+  display: flex; flex-direction: column; gap: 16px; align-items: center; z-index: 6;
+}
+.lateral:empty, .lateral.oculto { display: none; }
+.lateral .item { text-align: center; color: #fff; font-weight: 800; font-size: 22px; text-shadow: 0 2px 4px #000; }
+.lateral .item .ic { font-size: 58px; line-height: 1.1; display: block; }
+.lateral .item img.ic { width: 70px; height: 70px; margin: 0 auto; }
+
+/* ------------------------------------------------ alertas */
+.alertas { position: absolute; left: 30px; top: 1080px; width: 760px; display: flex; flex-direction: column; gap: 16px; z-index: 7; }
+.alerta {
+  display: flex; align-items: center; gap: 18px;
+  background: linear-gradient(90deg, rgba(40,40,40,.92), rgba(40,40,40,.0));
+  border-radius: 60px; padding: 10px 18px 10px 10px; color: #fff;
+  animation: entrar .35s ease-out, sair .4s ease-in forwards 4.6s;
+}
+.alerta .av { width: 92px; height: 92px; border-radius: 50%; overflow: hidden; flex: none; background: #555; border: 3px solid #fff3; }
+.alerta .av img { width: 100%; height: 100%; object-fit: cover; }
+.alerta .av { display: flex; align-items: center; justify-content: center; color: #fff; font-weight: 900; font-size: 38px; }
+.alerta .tx { min-width: 0; }
+.alerta .nm { font-size: 34px; font-weight: 700; max-width: 330px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.alerta .ds { font-size: 26px; opacity: .8; }
+.alerta .gi { font-size: 70px; width: 90px; height: 90px; display: flex; align-items: center; justify-content: center; flex: none; }
+.alerta .gi img { width: 90px; height: 90px; }
+.alerta .qt { font-size: 64px; font-weight: 900; font-style: italic; text-shadow: 0 3px 6px #000; }
+.alerta.destaque { background: linear-gradient(90deg, rgba(255,45,85,.9), rgba(255,45,85,0)); }
+@keyframes entrar { from { transform: translateX(-120%); opacity: 0; } }
+@keyframes sair { to { transform: translateX(-120%); opacity: 0; } }
+
+/* ------------------------------------------------ coracoes */
+.coracoes { position: absolute; right: 40px; bottom: 120px; width: 140px; height: 700px; pointer-events: none; z-index: 8; }
+.coracao { position: absolute; bottom: 0; font-size: 64px; animation: subir 2.4s ease-out forwards; }
+@keyframes subir {
+  0% { transform: translate(0, 0) scale(.6); opacity: 0; }
+  15% { opacity: 1; }
+  100% { transform: translate(var(--dx, 0), -650px) scale(1.1); opacity: 0; }
+}
+
+.aviso { position: absolute; bottom: 20px; left: 50%; transform: translateX(-50%); background: #ff2d55; color: #fff; padding: 12px 24px; border-radius: 30px; font-size: 26px; font-weight: 700; display: none; z-index: 20; cursor: pointer; }

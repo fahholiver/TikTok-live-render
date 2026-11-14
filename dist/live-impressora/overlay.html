@@ -1,0 +1,51 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Overlay - Impressora</title>
+  <link rel="stylesheet" href="overlay.css">
+</head>
+<body>
+  <div id="palco">
+    <!-- Banner da meta -->
+    <div id="banner" class="banner">
+      <span class="banner-coracao">❤</span>
+      <span id="bannerTexto">1000 CURTIDAS = SUA FOTO IMPRESSA</span>
+      <span id="bannerTimer" class="banner-timer">15:00</span>
+    </div>
+
+    <!-- Cena 3D da impressora (plotter: barra anda no eixo Y, cabeca anda no eixo X) -->
+    <div class="cena">
+      <div class="plano">
+        <div class="mesa"></div>
+        <div class="trilho esq"></div>
+        <div class="trilho dir"></div>
+        <div class="papel" id="papel">
+          <div class="rolo" id="rolo"></div>
+        </div>
+        <div class="corpo"><span>LIVE PRINT</span></div>
+        <div class="ponte" id="ponte">
+          <div class="barra"></div>
+          <div class="carro" id="carro"><div class="cabeca" id="cabeca"><div class="luz"></div></div></div>
+        </div>
+      </div>
+      <div class="luz-teto"></div>
+    </div>
+
+    <!-- Lista lateral de presentes/acoes -->
+    <div id="lateral" class="lateral"></div>
+
+    <!-- Alertas de presentes -->
+    <div id="alertas" class="alertas"></div>
+
+    <!-- Coracoes -->
+    <div id="coracoes" class="coracoes"></div>
+
+    <div id="aviso" class="aviso">Clique uma vez aqui para liberar o som</div>
+  </div>
+
+  <script src="/socket.io/socket.io.js"></script>
+  <script src="overlay.js"></script>
+</body>
+</html>

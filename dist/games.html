@@ -47,6 +47,7 @@ body.playing:not(.obs) #bar{display:flex}
   <span id="copyMsg"></span>
 </div>
 <canvas id="stage"></canvas>
+<style>#printer{position:fixed;inset:0;width:100%;height:100%;border:0}body.playing #stage[hidden]{display:none}#bar{z-index:2}</style>
 <script src="/socket.io/socket.io.js" onerror="window.io=undefined"></script>
 <script src="games/core.js"></script>
 <script src="games/marble-race.js"></script>
@@ -74,15 +75,38 @@ body.playing:not(.obs) #bar{display:flex}
     $('cards').append(card);
   }
   const id = params.get('game');
-  if (id && G.start(id)) {
+  const printer = id === 'live-impressora';
+  const card = document.createElement('div');
+  card.className = 'card';
+  card.innerHTML = '<h2>🖨️ Live Impressora</h2><p>Presentes e cada 1.000 curtidas do mesmo espectador imprimem um cartão com a foto dele.</p><a class="button pink">Abrir jogo</a>';
+  card.querySelector('a').href = withKey('live-impressora');
+  $('cards').append(card);
+  let frame;
+  function loadPrinter() {
+    const options = new URLSearchParams();
+    if (G.key) options.set('key', G.key);
+    if ($('sim').checked) options.set('sim', '1');
+    frame.src = '/live-impressora/overlay.html?' + options;
+  }
+  if (printer) {
+    document.body.classList.add('playing');
+    $('stage').hidden = true;
+    $('sim').checked = params.get('sim') === '1';
+    frame = document.createElement('iframe');
+    frame.id = 'printer';
+    frame.title = 'Live Impressora';
+    frame.allow = 'autoplay';
+    loadPrinter();
+    document.body.append(frame);
+  } else if (id && G.start(id)) {
     document.body.classList.add('playing');
     const sim = params.get('sim') === '1';
     $('sim').checked = sim;
     G.setSimulate(sim);
   }
   $('back').href = G.key ? 'games.html?key=' + encodeURIComponent(G.key) : 'games.html';
-  $('sim').onchange = () => G.setSimulate($('sim').checked);
-  $('reset').onclick = () => G.reset();
+  $('sim').onchange = () => printer ? loadPrinter() : G.setSimulate($('sim').checked);
+  $('reset').onclick = () => printer ? loadPrinter() : G.reset();
   $('hide').onclick = () => { $('bar').hidden = true; };
   $('copy').onclick = async () => {
     let url = location.origin + '/' + withKey(id) + (G.key ? '' : '&obs=1');
@@ -94,7 +118,7 @@ body.playing:not(.obs) #bar{display:flex}
     $('copyMsg').textContent = url;
     try { await navigator.clipboard.writeText(url); $('copy').textContent = 'URL copiada'; setTimeout(() => $('copy').textContent = 'Copiar URL do OBS', 2000); } catch {}
   };
-  G.boot();
+  if (!printer) G.boot();
 })();
 </script>
 </body>
